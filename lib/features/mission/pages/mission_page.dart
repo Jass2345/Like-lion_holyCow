@@ -1,0 +1,79 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../controllers/mission_controller.dart';
+
+class MissionPage extends ConsumerWidget {
+  const MissionPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final missionsAsync = ref.watch(missionsProvider);
+    final checkInState = ref.watch(missionControllerProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('미션 & 출석')),
+      body: Column(
+        children: [
+          // 출석 체크 섹션
+          Card(
+            margin: const EdgeInsets.all(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text('오늘의 출석 체크', style: TextStyle(fontSize: 18)),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: checkInState.isLoading
+                        ? null
+                        : () => ref
+                            .read(missionControllerProvider.notifier)
+                            .checkIn(),
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('출석하기 (+10💰)'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 미션 목록
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('미션 목록', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: missionsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('오류: $e')),
+              data: (missions) => ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: missions.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (_, i) {
+                  final mission = missions[i];
+                  return Card(
+                    child: ListTile(
+                      leading: Icon(
+                        mission.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: mission.isCompleted ? Colors.green : null,
+                      ),
+                      title: Text(mission.title),
+                      subtitle: Text(mission.description),
+                      trailing: Text('💰 ${mission.reward}'),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

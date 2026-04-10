@@ -1,0 +1,27 @@
+import 'dart:async';
+
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../../../core/utils/date_utils.dart';
+import 'game_controller.dart';
+
+part 'timer_controller.g.dart';
+
+/// 폭탄 남은 시간을 HH:MM:SS 문자열로 제공하는 provider
+/// activeBomb의 expiresAt 기준으로 1초마다 갱신
+@riverpod
+String bombTimer(BombTimerRef ref) {
+  final bomb = ref.watch(activeBombProvider).valueOrNull;
+  if (bomb == null) return '00:00:00';
+
+  final remaining = bomb.expiresAt.difference(DateTime.now());
+  if (remaining.isNegative) return '00:00:00';
+
+  // 1초마다 갱신
+  final timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    ref.invalidateSelf();
+  });
+  ref.onDispose(timer.cancel);
+
+  return AppDateUtils.formatDuration(remaining);
+}

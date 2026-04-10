@@ -1,0 +1,9 @@
+import * as admin from 'firebase-admin';
+
+// Firebase Admin 초기화 (Cloud Functions 환경에서 자동 인증)
+admin.initializeApp();
+
+// 각 도메인별 함수 export
+export * from './bomb/bombExpireScheduler';
+export * from './group/groupTriggers';
+export * from './notification/fcmSender';
