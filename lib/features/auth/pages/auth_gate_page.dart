@@ -50,7 +50,7 @@ class _SignInScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                '💣 BombPass',
+                '💣 Bombastic',
                 style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),

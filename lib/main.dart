@@ -15,20 +15,20 @@ Future<void> main() async {
 
   runApp(
     const ProviderScope(
-      child: BombPassApp(),
+      child: BombasticApp(),
     ),
   );
 }
 
-class BombPassApp extends ConsumerWidget {
-  const BombPassApp({super.key});
+class BombasticApp extends ConsumerWidget {
+  const BombasticApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'BombPass',
+      title: 'Bombastic',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

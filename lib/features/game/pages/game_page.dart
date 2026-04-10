@@ -16,7 +16,7 @@ class GamePage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('💣 BombPass'),
+        title: const Text('💣 Bombastic'),
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_bag),

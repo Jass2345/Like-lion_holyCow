@@ -24,7 +24,7 @@ class ResultShareCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            '💣 BombPass',
+            '💣 Bombastic',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -66,7 +66,7 @@ class ResultShareCard extends StatelessWidget {
               ),
           const SizedBox(height: 16),
           const Text(
-            '#BombPass #폭탄돌리기',
+            '#Bombastic #봄바스틱 #폭탄돌리기',
             style: TextStyle(color: Colors.white38, fontSize: 12),
           ),
         ],
