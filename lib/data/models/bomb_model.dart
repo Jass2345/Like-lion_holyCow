@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'bomb_model.freezed.dart';
@@ -19,5 +20,32 @@ abstract class BombModel with _$BombModel {
   }) = _BombModel;
 
   factory BombModel.fromJson(Map<String, dynamic> json) =>
-      _$BombModelFromJson(json);
+      _$BombModelFromJson(_normalizeBombJson(json));
+}
+
+Map<String, dynamic> _normalizeBombJson(Map<String, dynamic> json) {
+  final map = Map<String, dynamic>.from(json);
+  map['receivedAt'] =
+      _normalizeRequiredDateValue(map['receivedAt'], 'receivedAt');
+  map['expiresAt'] = _normalizeRequiredDateValue(map['expiresAt'], 'expiresAt');
+  return map;
+}
+
+Object _normalizeRequiredDateValue(Object? value, String field) {
+  final normalized = _normalizeNullableDateValue(value);
+  if (normalized == null) {
+    throw FormatException('Missing required date field: $field');
+  }
+  return normalized;
+}
+
+String? _normalizeNullableDateValue(Object? value) {
+  if (value == null) return null;
+  if (value is Timestamp) return value.toDate().toIso8601String();
+  if (value is DateTime) return value.toIso8601String();
+  if (value is String) return value;
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value).toIso8601String();
+  }
+  throw FormatException('Unsupported date value: $value');
 }

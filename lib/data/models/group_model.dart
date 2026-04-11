@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'group_model.freezed.dart';
@@ -22,5 +23,32 @@ abstract class GroupModel with _$GroupModel {
   }) = _GroupModel;
 
   factory GroupModel.fromJson(Map<String, dynamic> json) =>
-      _$GroupModelFromJson(json);
+      _$GroupModelFromJson(_normalizeGroupJson(json));
+}
+
+Map<String, dynamic> _normalizeGroupJson(Map<String, dynamic> json) {
+  final map = Map<String, dynamic>.from(json);
+  map['createdAt'] = _normalizeRequiredDateValue(map['createdAt'], 'createdAt');
+  map['gameStartedAt'] = _normalizeNullableDateValue(map['gameStartedAt']);
+  map['gameEndedAt'] = _normalizeNullableDateValue(map['gameEndedAt']);
+  return map;
+}
+
+Object _normalizeRequiredDateValue(Object? value, String field) {
+  final normalized = _normalizeNullableDateValue(value);
+  if (normalized == null) {
+    throw FormatException('Missing required date field: $field');
+  }
+  return normalized;
+}
+
+String? _normalizeNullableDateValue(Object? value) {
+  if (value == null) return null;
+  if (value is Timestamp) return value.toDate().toIso8601String();
+  if (value is DateTime) return value.toIso8601String();
+  if (value is String) return value;
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value).toIso8601String();
+  }
+  throw FormatException('Unsupported date value: $value');
 }
