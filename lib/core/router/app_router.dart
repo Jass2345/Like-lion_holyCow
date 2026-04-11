@@ -21,9 +21,8 @@ abstract final class AppRoutes {
   static const groupCreate = '/group/create';
   static const game = '/game';       // /game/:groupId
   static const nickname = '/group';  // /group/:groupId/nickname
-  static const shop = '/shop';
-  static const mission = '/mission';
-  static const result = '/result';
+  static const result = '/result';   // /result/:groupId
+  // 상점·미션은 게임 내부에서만 접근 가능: /game/:groupId/shop, /game/:groupId/mission
 }
 
 @riverpod
@@ -59,14 +58,20 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => GamePage(
           groupId: state.pathParameters['groupId']!,
         ),
-      ),
-      GoRoute(
-        path: AppRoutes.shop,
-        builder: (context, state) => const ShopPage(),
-      ),
-      GoRoute(
-        path: AppRoutes.mission,
-        builder: (context, state) => const MissionPage(),
+        routes: [
+          GoRoute(
+            path: 'shop',
+            builder: (context, state) => ShopPage(
+              groupId: state.pathParameters['groupId']!,
+            ),
+          ),
+          GoRoute(
+            path: 'mission',
+            builder: (context, state) => MissionPage(
+              groupId: state.pathParameters['groupId']!,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '${AppRoutes.result}/:groupId',

@@ -86,7 +86,7 @@ final class MissionControllerProvider
   }
 }
 
-String _$missionControllerHash() => r'9e5c325733bc60aade09fceb85bb4fa62519b796';
+String _$missionControllerHash() => r'dccbb2fd5b00d4e4e24ca9208fc12d04981421eb';
 
 abstract class _$MissionController extends $Notifier<AsyncValue<void>> {
   AsyncValue<void> build();

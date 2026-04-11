@@ -7,12 +7,15 @@ import '../../../data/models/shop_item_model.dart';
 import '../controllers/shop_controller.dart';
 
 class ShopPage extends ConsumerWidget {
-  const ShopPage({super.key});
+  const ShopPage({super.key, required this.groupId});
+
+  final String groupId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(shopItemsProvider);
-    final currency = ref.watch(currentUserProvider).asData?.value?.currency ?? 0;
+    final user = ref.watch(currentUserProvider).asData?.value;
+    final currency = user?.groupCurrencies[groupId] ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -31,18 +34,16 @@ class ShopPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('오류: $e')),
         data: (items) {
-          final pool =
-              items.where((i) => i.probability > 0).toList()
-                ..sort((a, b) => b.probability.compareTo(a.probability));
-          final totalWeight =
-              pool.fold(0, (sum, i) => sum + i.probability);
+          final pool = items.where((i) => i.probability > 0).toList()
+            ..sort((a, b) => b.probability.compareTo(a.probability));
+          final totalWeight = pool.fold(0, (sum, i) => sum + i.probability);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _RandomBoxCard(currency: currency),
+                _RandomBoxCard(currency: currency, groupId: groupId),
                 const SizedBox(height: 32),
                 const Text(
                   '아이템 목록',
@@ -74,9 +75,10 @@ class ShopPage extends ConsumerWidget {
 // ── 랜덤박스 구매 카드 ────────────────────────────────────────
 
 class _RandomBoxCard extends ConsumerWidget {
-  const _RandomBoxCard({required this.currency});
+  const _RandomBoxCard({required this.currency, required this.groupId});
 
   final int currency;
+  final String groupId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -138,8 +140,9 @@ class _RandomBoxCard extends ConsumerWidget {
   }
 
   Future<void> _onPurchase(BuildContext context, WidgetRef ref) async {
-    final obtained =
-        await ref.read(shopControllerProvider.notifier).purchaseRandomBox();
+    final obtained = await ref
+        .read(shopControllerProvider.notifier)
+        .purchaseRandomBox(groupId: groupId);
 
     if (!context.mounted) return;
 

@@ -10,8 +10,10 @@ abstract class UserModel with _$UserModel {
   const factory UserModel({
     required String uid,
     required String displayName,
-    @Default(0) int currency,
-    @Default([]) List<String> ownedItemIds,
+    /// 그룹별 재화 잔액 (groupId → amount)
+    @Default({}) Map<String, int> groupCurrencies,
+    /// 그룹별 보유 아이템 (groupId → itemIds)
+    @Default({}) Map<String, List<String>> groupOwnedItemIds,
     @Default([]) List<String> groupIds,
     @Default({}) Map<String, String> groupNicknames,
     String? currentGroupId,
@@ -27,6 +29,22 @@ Map<String, dynamic> _normalizeUserJson(Map<String, dynamic> json) {
   final map = Map<String, dynamic>.from(json);
   map['lastCheckInDate'] = _normalizeNullableDateValue(map['lastCheckInDate']);
   map['createdAt'] = _normalizeNullableDateValue(map['createdAt']);
+
+  // groupCurrencies: Map<String, dynamic> → Map<String, int>
+  if (map['groupCurrencies'] != null) {
+    final raw = map['groupCurrencies'] as Map<String, dynamic>;
+    map['groupCurrencies'] =
+        raw.map((k, v) => MapEntry(k, (v as num).toInt()));
+  }
+
+  // groupOwnedItemIds: Map<String, List<dynamic>> → Map<String, List<String>>
+  if (map['groupOwnedItemIds'] != null) {
+    final raw = map['groupOwnedItemIds'] as Map<String, dynamic>;
+    map['groupOwnedItemIds'] = raw.map(
+      (k, v) => MapEntry(k, (v as List<dynamic>).cast<String>()),
+    );
+  }
+
   return map;
 }
 

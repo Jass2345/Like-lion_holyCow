@@ -86,7 +86,7 @@ final class ShopControllerProvider
   }
 }
 
-String _$shopControllerHash() => r'80183f2788644f5b35e6227532c225a18f132304';
+String _$shopControllerHash() => r'6ac325651e4fa47c79635a7a2f847d1d3e3d2fa0';
 
 abstract class _$ShopController extends $Notifier<AsyncValue<ShopItemModel?>> {
   AsyncValue<ShopItemModel?> build();

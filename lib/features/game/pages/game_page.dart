@@ -195,11 +195,13 @@ class _PlayingView extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_bag),
-            onPressed: () => context.push(AppRoutes.shop),
+            onPressed: () =>
+                context.push('${AppRoutes.game}/$groupId/shop'),
           ),
           IconButton(
             icon: const Icon(Icons.assignment),
-            onPressed: () => context.push(AppRoutes.mission),
+            onPressed: () =>
+                context.push('${AppRoutes.game}/$groupId/mission'),
           ),
         ],
       ),
@@ -239,8 +241,9 @@ class _GameBody extends ConsumerWidget {
     final uid = ref.watch(currentUidProvider);
     final group = ref.watch(watchGroupProvider(groupId)).asData?.value;
     final ownedItemIds =
-        ref.watch(currentUserProvider).asData?.value?.ownedItemIds ??
-            const <String>[];
+        ref.watch(currentUserProvider).asData?.value
+            ?.groupOwnedItemIds[groupId] ??
+        const <String>[];
     final shopItems =
         ref.watch(shopItemsProvider).asData?.value ?? const <ShopItemModel>[];
 

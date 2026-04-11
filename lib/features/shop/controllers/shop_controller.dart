@@ -18,17 +18,19 @@ class ShopController extends _$ShopController {
   AsyncValue<ShopItemModel?> build() => const AsyncData(null);
 
   /// 랜덤박스 구매 — 성공 시 state에 획득 아이템 저장
-  Future<ShopItemModel?> purchaseRandomBox() async {
+  Future<ShopItemModel?> purchaseRandomBox({required String groupId}) async {
     final uid = ref.read(currentUidProvider);
     if (uid == null) return null;
 
     state = const AsyncLoading();
     ShopItemModel? obtained;
-    state = await AsyncValue.guard(() async {
-      obtained =
-          await ref.read(shopRepositoryProvider).purchaseRandomBox(uid: uid);
+    final next = await AsyncValue.guard(() async {
+      obtained = await ref
+          .read(shopRepositoryProvider)
+          .purchaseRandomBox(uid: uid, groupId: groupId);
       return obtained;
     });
+    if (ref.mounted) state = next;
     return obtained;
   }
 }

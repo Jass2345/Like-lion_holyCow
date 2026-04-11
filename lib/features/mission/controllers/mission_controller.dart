@@ -17,15 +17,17 @@ class MissionController extends _$MissionController {
   @override
   AsyncValue<void> build() => const AsyncData(null);
 
-  Future<void> checkIn() async {
+  Future<void> checkIn({required String groupId}) async {
     final uid = ref.read(currentUidProvider);
     if (uid == null) return;
 
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final rewarded =
-          await ref.read(missionRepositoryProvider).checkIn(uid);
+    final next = await AsyncValue.guard(() async {
+      final rewarded = await ref
+          .read(missionRepositoryProvider)
+          .checkIn(uid: uid, groupId: groupId);
       if (!rewarded) throw Exception('오늘은 이미 출석했습니다.');
     });
+    if (ref.mounted) state = next;
   }
 }

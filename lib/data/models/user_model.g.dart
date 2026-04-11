@@ -9,12 +9,17 @@ part of 'user_model.dart';
 _UserModel _$UserModelFromJson(Map<String, dynamic> json) => _UserModel(
   uid: json['uid'] as String,
   displayName: json['displayName'] as String,
-  currency: (json['currency'] as num?)?.toInt() ?? 0,
-  ownedItemIds:
-      (json['ownedItemIds'] as List<dynamic>?)
-          ?.map((e) => e as String)
-          .toList() ??
-      const [],
+  groupCurrencies:
+      (json['groupCurrencies'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const {},
+  groupOwnedItemIds:
+      (json['groupOwnedItemIds'] as Map<String, dynamic>?)?.map(
+        (k, e) =>
+            MapEntry(k, (e as List<dynamic>).map((e) => e as String).toList()),
+      ) ??
+      const {},
   groupIds:
       (json['groupIds'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const [],
@@ -36,8 +41,8 @@ Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
     <String, dynamic>{
       'uid': instance.uid,
       'displayName': instance.displayName,
-      'currency': instance.currency,
-      'ownedItemIds': instance.ownedItemIds,
+      'groupCurrencies': instance.groupCurrencies,
+      'groupOwnedItemIds': instance.groupOwnedItemIds,
       'groupIds': instance.groupIds,
       'groupNicknames': instance.groupNicknames,
       'currentGroupId': instance.currentGroupId,

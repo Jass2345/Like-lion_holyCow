@@ -68,8 +68,8 @@ class MissionRepository {
     ),
   ];
 
-  /// 출석 체크
-  Future<bool> checkIn(String uid) async {
+  /// 출석 체크 — 그룹별 재화 지급
+  Future<bool> checkIn({required String uid, required String groupId}) async {
     final todayKey = AppDateUtils.todayKey();
     final userRef = _firestore
         .collection(AppConstants.usersCollection)
@@ -83,7 +83,7 @@ class MissionRepository {
 
       tx.update(userRef, {
         'lastCheckInDate': todayKey,
-        'currency':
+        'groupCurrencies.$groupId':
             FieldValue.increment(CurrencyConstants.dailyCheckInReward),
       });
       return true;

@@ -38,8 +38,11 @@ class ShopRepository {
             snap.docs.map((d) => ShopItemModel.fromJson(d.data())).toList());
   }
 
-  /// 랜덤박스 구매 — 재화 차감 후 가중치 기반으로 아이템 1개 지급, 획득 아이템 반환
-  Future<ShopItemModel> purchaseRandomBox({required String uid}) async {
+  /// 랜덤박스 구매 — 그룹별 재화 차감 후 가중치 기반으로 아이템 1개 지급, 획득 아이템 반환
+  Future<ShopItemModel> purchaseRandomBox({
+    required String uid,
+    required String groupId,
+  }) async {
     final items = await fetchItems();
     final pool = items.where((i) => i.probability > 0).toList();
     if (pool.isEmpty) throw Exception('뽑기 가능한 아이템이 없습니다.');
@@ -51,7 +54,9 @@ class ShopRepository {
 
     await _firestore.runTransaction((tx) async {
       final userSnap = await tx.get(userRef);
-      final currentCurrency = (userSnap.data()?['currency'] as int?) ?? 0;
+      final currencies =
+          (userSnap.data()?['groupCurrencies'] as Map<String, dynamic>?) ?? {};
+      final currentCurrency = (currencies[groupId] as num?)?.toInt() ?? 0;
 
       if (currentCurrency < CurrencyConstants.randomBoxPrice) {
         throw Exception('재화가 부족합니다.');
@@ -71,8 +76,9 @@ class ShopRepository {
       }
 
       tx.update(userRef, {
-        'currency': currentCurrency - CurrencyConstants.randomBoxPrice,
-        'ownedItemIds': FieldValue.arrayUnion([obtained.id]),
+        'groupCurrencies.$groupId':
+            currentCurrency - CurrencyConstants.randomBoxPrice,
+        'groupOwnedItemIds.$groupId': FieldValue.arrayUnion([obtained.id]),
       });
     });
 

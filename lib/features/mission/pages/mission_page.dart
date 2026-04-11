@@ -1,18 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_constants.dart';
+import '../../../data/firebase/firebase_providers.dart';
 import '../controllers/mission_controller.dart';
 
 class MissionPage extends ConsumerWidget {
-  const MissionPage({super.key});
+  const MissionPage({super.key, required this.groupId});
+
+  final String groupId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final missionsAsync = ref.watch(missionsProvider);
     final checkInState = ref.watch(missionControllerProvider);
+    final user = ref.watch(currentUserProvider).asData?.value;
+    final currency = user?.groupCurrencies[groupId] ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('미션 & 출석')),
+      appBar: AppBar(
+        title: const Text('미션 & 출석'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Chip(
+              avatar: const Icon(Icons.monetization_on, size: 18),
+              label: Text('$currency'),
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // 출석 체크 섹션
@@ -23,15 +40,35 @@ class MissionPage extends ConsumerWidget {
               child: Column(
                 children: [
                   const Text('오늘의 출석 체크', style: TextStyle(fontSize: 18)),
+                  const SizedBox(height: 4),
+                  Text(
+                    '출석 보상은 이 그룹의 재화로 지급됩니다.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
                     onPressed: checkInState.isLoading
                         ? null
-                        : () => ref
-                            .read(missionControllerProvider.notifier)
-                            .checkIn(),
+                        : () async {
+                            await ref
+                                .read(missionControllerProvider.notifier)
+                                .checkIn(groupId: groupId);
+                            if (!context.mounted) return;
+                            final err =
+                                ref.read(missionControllerProvider).error;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  err != null
+                                      ? '$err'
+                                      : '출석 완료! +${CurrencyConstants.dailyCheckInReward}💰',
+                                ),
+                              ),
+                            );
+                          },
                     icon: const Icon(Icons.check_circle),
-                    label: const Text('출석하기 (+10💰)'),
+                    label: const Text(
+                        '출석하기 (+${CurrencyConstants.dailyCheckInReward}💰)'),
                   ),
                 ],
               ),
@@ -43,7 +80,10 @@ class MissionPage extends ConsumerWidget {
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('미션 목록', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text(
+                '미션 목록',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -60,7 +100,9 @@ class MissionPage extends ConsumerWidget {
                   return Card(
                     child: ListTile(
                       leading: Icon(
-                        mission.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+                        mission.isCompleted
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
                         color: mission.isCompleted ? Colors.green : null,
                       ),
                       title: Text(mission.title),
