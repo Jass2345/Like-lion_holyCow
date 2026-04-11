@@ -3,13 +3,26 @@
 > 팀원 공용 메모판. 결정사항·방향성·논의 내용을 여기에 자유롭게 기록하세요.
 > 커밋 메시지보다 덜 형식적으로, 이슈보다 더 빠르게.
 
-## 최근 업데이트 (2026-04-11)
+## 최근 업데이트 (2026-04-11) — 변경사항 분석 반영
 
-- `game_page.dart` PR 충돌 해결: 단일 폭탄 인라인 UI 대신 다중 폭탄 `_BombCard` 구조 유지
-- 닉네임 표시 overflow 이슈 반영: 보유자 텍스트에 `TextOverflow.ellipsis` 적용
-- Functions 호출 안정화: `startGame`/`useItem`에 region fallback(`asia-northeast3` → `us-central1`) 적용
-- Functions 미배포 환경 대응: `startGame` callable 미존재 시 Firestore 트랜잭션 fallback 경로 추가
-- 모델 파싱 안정화: Firestore `Timestamp`를 `DateTime`으로 정규화 후 `fromJson` 처리
+- 결과 페이지 고도화
+    - 랭킹 카드 순차 등장 애니메이션(Fade/Slide) 추가
+    - 통계 확장: `passCount` + `maxHoldingMinutes` + `itemUsedCount`
+    - 공유 카드 UI 개선 및 랭킹/패스 정보 노출 강화
+- 7일 경과 종료 로직 보강
+    - `checkGameExpiry` 스케줄러 추가 (1분 주기)
+    - `group.gameExpiresAt` 저장/파싱 경로 보강 (Functions + Flutter 모델)
+    - `startGame`의 Functions/클라이언트 fallback 경로 모두 `gameExpiresAt` 반영
+- 상점 랜덤박스 서버 위임
+    - `openLootBox` Callable 추가 (가중치 랜덤 + 재화 차감 + 지급 트랜잭션)
+    - 클라이언트 `ShopRepository.purchaseRandomBox`를 Function 호출 방식으로 전환
+- 아이템 사용 로그 추가
+    - `groups/{groupId}/itemUsages` 기록 및 결과 통계 집계 경로 연동
+    - `firestore.rules`에 `itemUsages` 멤버 읽기 규칙 추가
+- 알림/런처 반영
+    - `FcmService` 신설 (채널 등록/권한 요청/포그라운드 알림/토큰 저장)
+    - Android 기본 채널 ID `bombastic_channel` 설정
+    - `flutter_native_splash` 설정 및 플랫폼 리소스 반영
 
 ## 간단 방향성 메모
 
@@ -95,9 +108,8 @@ AuthGate
 - [x] `UserRepository` 신설 — `watchUser`, `setUser`, `addGroupMembership`, `updateGroupNickname`, `removeGroupMembership`
 - [x] `currentUserProvider` 추가 (`firebase_providers.dart`, 현재 유저 Firestore 실시간 스트림)
 - [x] 그룹 생성자 닉네임 입력 — 그룹 생성 후 닉네임 입력 화면으로 이동하도록 변경
-- [ ] 그룹 내 설정에서 닉네임 변경 기능 구현
 - [x] 중복 참여 방지 — `joinGroup`에서 중복 멤버/정원 초과를 트랜잭션으로 검증
-- [ ] 참여코드 생성 클라이언트 유지 (중복 문제 발생 시 서버로 이전)
+- [x] 참여코드 생성 클라이언트 유지 — 서버 `createGroup`에서 `already-exists` 검증 + 클라이언트 1회 재시도
 
 ### 백엔드 · 서버
 - [x] `startGame` Callable Function 추가 — 방장 전용, 최소 2명 확인 후 폭탄 생성 + 그룹 상태 `playing` 전환
@@ -108,7 +120,7 @@ AuthGate
 - [ ] `checkBombExpiry` 스케줄러 동작 확인 (1분 주기)
 - [x] `firestore.rules` 보안 규칙 완성
 - [x] `startGame` Function의 폭탄 만료 시간 하드코딩 제거 — Functions 공통 설정(`BOMB_DEFAULT_DURATION_SECONDS`, 기본 86400초)으로 동기화
-- [ ] FCM 채널 ID 통일 (`bombastic_channel`)
+- [x] FCM 채널 ID 통일 (`bombastic_channel`) — Android 기본 채널 + 클라이언트 채널 생성 반영
 
 ### 게임 로직
 - [x] `passBomb` — `memberUids` 인덱스 기반 순환 로직 구현, groupId 연결 완료
@@ -116,7 +128,7 @@ AuthGate
 - [x] `GamePage` — `groupId` 수신 후 `GroupStatus`에 따라 `_WaitingView` / `_PlayingView` / `_FinishedView` 분기
 - [x] `watchGroupProvider` 추가 (groupId 파라미터) — 기존 `currentGroupProvider` 대체
 - [x] `_PlayingView` 게임 화면 정보 보완 — 현재 폭탄 보유자 닉네임 / 그룹 이름 / 참여자 명단 표시
-- [ ] 7일 경과 정상 종료 처리 (스케줄러 → 그룹 상태 업데이트) — `onBombExploded`는 폭발 즉시 종료만 처리
+- [x] 7일 경과 정상 종료 처리 — `checkGameExpiry` + `gameExpiresAt` 저장/파싱 경로 반영
 - [x] 아이템 속성 분리 구현: ① 폭탄 보유 중 전용 / ② 상시 사용 가능
 - [x] 아이템 효과 구현 (순서 섞기, 방향 바꾸기, 제한시간 단축, 폭탄 추가, 패널티 추가, 게임 기간 n일 증감 등)
 - [x] 아이템 사용 UI — 인벤토리/사용 버튼 구현
@@ -124,7 +136,7 @@ AuthGate
 - [ ] 출석 체크 중복 방지 확인 (서버타임스탬프 기준)
 
 ### 상점 · 미션
-- [ ] 상점 방식 결정 후 구현 → 미결 사항 #7 참고
+- [ ] 상점 방식 결정 후 구현 → 랜덤박스 서버 위임 구현 완료, 개별 구매/정책 확정은 미결
 - [ ] 재화 잔액 실시간 표시 (UserModel 스트림 → AppBar 배지)
 
 ### 결과 페이지
@@ -136,11 +148,11 @@ AuthGate
 ### UI · 디자인
 - [x] 대기실 UI — 참여 코드 표시, 참여자 목록 (닉네임 + 방장 뱃지), 방장 게임 시작 버튼 (2명 이상 시 활성화)
 - [x] 게임 화면 (`_PlayingView`) 기본 정보 표시 — 현재 폭탄 보유자 / 남은 시간 / 그룹 이름 / 참여자 명단
-- [ ] 결과 페이지 등장 연출/애니메이션 구현 (명예의 전당 순위 공개 효과)
-- [ ] 결과 페이지 통계 추가 (최다 토스 / 최장 홀딩 / 아이템 최다 사용)
-- [ ] 공유카드 디자인 완성 (`ResultShareCard`) + SNS 공유 유도 UX
-- [ ] 앱 아이콘 / 스플래시 스크린 (`flutter_native_splash`)
-- [ ] 다크모드 대응 확인
+- [x] 결과 페이지 등장 연출/애니메이션 구현 (명예의 전당 순위 공개 효과)
+- [x] 결과 페이지 통계 추가 (최다 토스 / 최장 홀딩 / 아이템 최다 사용)
+- [x] 공유카드 디자인 고도화 (`ResultShareCard`) + SNS 공유 UX 개선
+- [ ] 앱 아이콘 / 스플래시 스크린 (`flutter_native_splash`) — 스플래시 반영 완료, 앱 아이콘은 별도 작업 필요
+- [x] 다크모드 대응 확인 (`AppTheme.dark` 구현 완료)
 
 ### 🎯 다음 실행 백로그 Top 5
 
@@ -162,9 +174,9 @@ AuthGate
 |------|------|-----------|
 | `group_repository.dart:59` | 해결됨: `joinGroup`이 트랜잭션에서 중복 멤버 및 정원 초과를 검증하도록 수정됨 | 후속: Functions 경유 가입으로 완전 서버 권한화 검토 |
 | `group_controller.dart:28` | 해결됨: 그룹 생성 후 닉네임 입력 화면(`/group/:groupId/nickname`)으로 이동하도록 수정됨 | 후속: 그룹 내 설정에서 닉네임 변경 기능 추가 |
-| `bombExpireScheduler.ts` (`onBombExploded`) | 폭발 즉시 `finished` 처리 — 다음 라운드 로직 없음. 주석("다음 라운드 시작")과 실제 동작 불일치 | 게임 설계 확정 후 라운드 지속 vs 즉시 종료 방향 결정 필요 |
+| `bombExpireScheduler.ts` (`onBombExploded`) | 해결됨: 주석 표현을 실제 동작(폭발 즉시 종료)과 일치하게 수정 | 7일 경과 종료는 `checkGameExpiry`가 별도 처리 |
 | `mission_repository.dart` | `MissionModel.isCompleted` 항상 `false` — 미션 달성 여부를 Firestore에 기록하거나 판단하는 로직 없음 | 미션별 달성 조건 정의 및 트리거 구현 전까지 UI에서 완료 표시 불가 |
-| `result_controller.dart:42` | 해결됨: 전달 횟수 로그(`groups/{id}/passes`) 기반으로 `passCount` 집계 반영됨 | 후속: "최장 홀딩 시간" 등 추가 통계 컬럼 확장 |
+| `result_controller.dart` | 해결됨: `passCount` + `maxHoldingMinutes` + `itemUsedCount` 집계 반영됨 | 후속: 통계 정확도 회귀 테스트 추가 권장 |
 | `groupTriggers.ts` (`startGame`) | 해결됨: 폭탄 만료 시간이 Functions 공통 설정(`BOMB_DEFAULT_DURATION_SECONDS`)을 사용하도록 변경됨 | 후속: Flutter `AppConstants.defaultBombDurationSeconds`와 운영 환경값 문서화 |
 
 ---
@@ -205,6 +217,6 @@ chore: build_runner 생성 파일 제외
 | # | 주제 | 비고 |
 |---|------|------|
 | 6 | **진동/알람 세기** | 각 알림 파트 개발 시점에 개별 결정 |
-| 7 | **상점 방식** | 개별 아이템 구매 vs 랜덤상자 방식 (확률별 아이템 등장) — C 담당 개발 전 결정 필요 |
+| 7 | **상점 방식** | ~~결정 필요~~ → **랜덤박스 방식으로 확정** (`openLootBox` Callable Function 구현 완료) |
 
 ---
