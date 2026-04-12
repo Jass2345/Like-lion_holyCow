@@ -7,6 +7,7 @@ import '../../../../core/theme/theme_provider.dart';
 import '../../../../data/models/group_model.dart';
 import '../../../admin/widgets/admin_cli_dialog.dart';
 import '../../../group/controllers/group_controller.dart';
+import '../../controllers/credits_controller.dart';
 
 class SettingsTab extends ConsumerWidget {
   const SettingsTab({super.key, required this.groupId});
@@ -79,7 +80,7 @@ class SettingsTab extends ConsumerWidget {
           ),
         ),
 
-        // 게임 종료 후 나가기
+        // 게임 종료 후 기능
         if (isFinished) ...[
           const SizedBox(height: 24),
           const Text(
@@ -89,14 +90,27 @@ class SettingsTab extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.exit_to_app, color: Colors.red),
-              title: const Text(
-                '그룹 나가기',
-                style: TextStyle(color: Colors.red),
-              ),
-              subtitle: const Text('그룹을 나가면 목록에서 사라집니다.'),
-              onTap: () => _confirmLeave(context, ref),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.movie_filter_outlined),
+                  title: const Text('엔딩 크레딧 다시보기'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => ref
+                      .read(creditsShownProvider(groupId).notifier)
+                      .showAgain(),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.exit_to_app, color: Colors.red),
+                  title: const Text(
+                    '그룹 나가기',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  subtitle: const Text('그룹을 나가면 목록에서 사라집니다.'),
+                  onTap: () => _confirmLeave(context, ref),
+                ),
+              ],
             ),
           ),
         ],

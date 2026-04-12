@@ -5,6 +5,7 @@ import 'package:bomb_pass/features/game/controllers/game_controller.dart';
 import 'package:bomb_pass/features/game/pages/tabs/home_tab.dart';
 import 'package:bomb_pass/features/game/pages/tabs/log_tab.dart';
 import 'package:bomb_pass/features/game/pages/tabs/settings_tab.dart';
+import 'package:bomb_pass/features/game/controllers/credits_controller.dart';
 import 'package:bomb_pass/features/game/widgets/ending_credits_overlay.dart';
 import 'package:bomb_pass/features/group/controllers/group_controller.dart';
 import 'package:bomb_pass/features/mission/pages/mission_page.dart';
@@ -284,18 +285,25 @@ class _FinishedView extends ConsumerStatefulWidget {
 }
 
 class _FinishedViewState extends ConsumerState<_FinishedView> {
-  bool _creditsShown = false;
-
   @override
   Widget build(BuildContext context) {
-    if (!_creditsShown) {
-      return EndingCreditsOverlay(
-        group: widget.group,
-        onDismissed: () => setState(() => _creditsShown = true),
-      );
-    }
+    final creditsState =
+        ref.watch(creditsShownProvider(widget.group.id));
 
-    return _FinishedTabView(group: widget.group);
+    return creditsState.when(
+      // SharedPreferences 로딩 중엔 검은 화면 유지 (크레딧과 자연스럽게 연결)
+      loading: () => const Scaffold(backgroundColor: Colors.black, body: SizedBox()),
+      error: (_, __) => _showCredits(),
+      data: (shown) => shown ? _FinishedTabView(group: widget.group) : _showCredits(),
+    );
+  }
+
+  Widget _showCredits() {
+    return EndingCreditsOverlay(
+      group: widget.group,
+      onDismissed: () =>
+          ref.read(creditsShownProvider(widget.group.id).notifier).markShown(),
+    );
   }
 }
 

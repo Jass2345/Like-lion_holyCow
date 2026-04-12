@@ -32,7 +32,7 @@ class _EndingCreditsOverlayState extends ConsumerState<EndingCreditsOverlay>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 26),
+      duration: const Duration(seconds: 20), // 기존 26s → 20s
     )..addStatusListener((status) {
         if (status == AnimationStatus.completed) {
           widget.onDismissed();
@@ -123,16 +123,26 @@ class _CreditsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final awards = resultAsync.asData?.value != null
+        ? _computeAwards(resultAsync.asData!.value)
+        : <_Award>[];
+
+    final loserName = awards
+        .where((a) => a.isLoser)
+        .expand((a) => a.winners)
+        .join(', ');
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: 64),
 
         // 인트로
-        _section(
-          child: Column(
+        _center(
+          Column(
             children: [
-              const Text('💣', style: TextStyle(fontSize: 72, color: Colors.white)),
+              const Text('💣',
+                  style: TextStyle(fontSize: 72, color: Colors.white)),
               const SizedBox(height: 16),
               const Text(
                 'Bombastic',
@@ -147,10 +157,7 @@ class _CreditsContent extends StatelessWidget {
               Text(
                 group.name,
                 style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.white70,
-                  letterSpacing: 2,
-                ),
+                    fontSize: 18, color: Colors.white70, letterSpacing: 2),
               ),
             ],
           ),
@@ -158,61 +165,63 @@ class _CreditsContent extends StatelessWidget {
         const SizedBox(height: 80),
 
         // 명예의 전당
-        _section(
-          child: Column(
-            children: [
-              _heading('🏆 명예의 전당'),
-              const SizedBox(height: 32),
-              resultAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (result) => _AwardsList(result: result),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 80),
+        if (awards.isNotEmpty) ...[
+          _center(_heading('🏆 명예의 전당')),
+          const SizedBox(height: 32),
+          ...awards.map((a) => _AwardItem(award: a)),
+          const SizedBox(height: 80),
+        ],
 
         // 참여자 목록
-        _section(
-          child: Column(
+        _center(_heading('참여자')),
+        const SizedBox(height: 24),
+        ...group.memberUids.map((uid) {
+          final nickname = group.memberNicknames[uid] ?? uid;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              nickname,
+              style: const TextStyle(
+                  fontSize: 20, color: Colors.white, letterSpacing: 1),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }),
+
+        const SizedBox(height: 48),
+
+        // 감사 + 패배자 장난 문구
+        _center(
+          Column(
             children: [
-              _heading('참여자'),
-              const SizedBox(height: 24),
-              ...group.memberUids.map((uid) {
-                final nickname = group.memberNicknames[uid] ?? uid;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(
-                    nickname,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      letterSpacing: 1,
-                    ),
-                    textAlign: TextAlign.center,
+              const Text(
+                '플레이에 감사드립니다! 🙏',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (loserName.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  '단, $loserName 님은\n내기를 꼭 이행하셔야 합니다 😈',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.orangeAccent,
+                    fontStyle: FontStyle.italic,
+                    height: 1.6,
                   ),
-                );
-              }),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),
-        const SizedBox(height: 80),
 
-        // 아웃트로
-        _section(
-          child: const Text(
-            '수고하셨습니다 🎉',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: 120),
+        const SizedBox(height: 200),
       ],
     );
   }
@@ -228,24 +237,7 @@ class _CreditsContent extends StatelessWidget {
         textAlign: TextAlign.center,
       );
 
-  Widget _section({required Widget child}) => Center(child: child);
-}
-
-// ── 어워드 목록 ───────────────────────────────────────────────
-
-class _AwardsList extends StatelessWidget {
-  const _AwardsList({required this.result});
-
-  final GameResultModel result;
-
-  @override
-  Widget build(BuildContext context) {
-    final awards = _computeAwards(result);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: awards.map((a) => _AwardItem(award: a)).toList(),
-    );
-  }
+  Widget _center(Widget child) => Center(child: child);
 
   List<_Award> _computeAwards(GameResultModel result) {
     final players = result.rankList;
@@ -253,55 +245,7 @@ class _AwardsList extends StatelessWidget {
 
     final awards = <_Award>[];
 
-    // 폭탄 러버 — maxHoldingMinutes 최대
-    final maxHolding =
-        players.map((p) => p.maxHoldingMinutes).reduce((a, b) => a > b ? a : b);
-    if (maxHolding > 0) {
-      final winners = players
-          .where((p) => p.maxHoldingMinutes == maxHolding)
-          .map((p) => p.displayName)
-          .toList();
-      awards.add(_Award(emoji: '🔥', title: '폭탄 러버', subtitle: '폭탄을 가장 오래 들고 있던 사람', winners: winners));
-    }
-
-    // 안전제일 — maxHoldingMinutes 최소 (> 0인 경우만)
-    final holdingValues =
-        players.where((p) => p.maxHoldingMinutes > 0).map((p) => p.maxHoldingMinutes).toList();
-    if (holdingValues.isNotEmpty) {
-      final minHolding = holdingValues.reduce((a, b) => a < b ? a : b);
-      // 폭탄 러버와 동일인이 되지 않도록 분리 (최소 ≠ 최대일 때만)
-      if (minHolding != maxHolding) {
-        final winners = players
-            .where((p) => p.maxHoldingMinutes == minHolding)
-            .map((p) => p.displayName)
-            .toList();
-        awards.add(_Award(emoji: '🛡️', title: '안전제일', subtitle: '폭탄을 가장 적게 들고 있던 사람', winners: winners));
-      }
-    }
-
-    // 다재다능 — itemUsedCount 최대
-    final maxItems =
-        players.map((p) => p.itemUsedCount).reduce((a, b) => a > b ? a : b);
-    if (maxItems > 0) {
-      final winners = players
-          .where((p) => p.itemUsedCount == maxItems)
-          .map((p) => p.displayName)
-          .toList();
-      awards.add(_Award(emoji: '🎯', title: '다재다능', subtitle: '아이템을 가장 많이 사용한 사람', winners: winners));
-    }
-
-    // 폭탄 배송 — passCount 최대
-    final maxPass =
-        players.map((p) => p.passCount).reduce((a, b) => a > b ? a : b);
-    if (maxPass > 0) {
-      final winners = players
-          .where((p) => p.passCount == maxPass)
-          .map((p) => p.displayName)
-          .toList();
-      awards.add(_Award(emoji: '📦', title: '폭탄 배송', subtitle: '누구보다 빠르게 폭탄을 넘긴 사람', winners: winners));
-    }
-
-    // 패배자 — explodeCount 최대
+    // 1. 패배자 — 맨 먼저
     final maxExplode =
         players.map((p) => p.explodeCount).reduce((a, b) => a > b ? a : b);
     if (maxExplode > 0) {
@@ -309,12 +253,89 @@ class _AwardsList extends StatelessWidget {
           .where((p) => p.explodeCount == maxExplode)
           .map((p) => p.displayName)
           .toList();
-      awards.add(_Award(emoji: '💥', title: '패배자', subtitle: '폭탄과 최후를 같이한 사람', winners: winners));
+      awards.add(_Award(
+        emoji: '💥',
+        title: '패배자',
+        subtitle: '진정한 인간 폭탄... 🙃',
+        winners: winners,
+        isLoser: true,
+      ));
+    }
+
+    // 2. 폭탄 러버
+    final maxHolding =
+        players.map((p) => p.maxHoldingMinutes).reduce((a, b) => a > b ? a : b);
+    if (maxHolding > 0) {
+      final winners = players
+          .where((p) => p.maxHoldingMinutes == maxHolding)
+          .map((p) => p.displayName)
+          .toList();
+      awards.add(_Award(
+        emoji: '🔥',
+        title: '폭탄 러버',
+        subtitle: '폭탄을 가장 오래 들고 있던 사람',
+        winners: winners,
+      ));
+    }
+
+    // 3. 안전제일
+    final holdingValues = players
+        .where((p) => p.maxHoldingMinutes > 0)
+        .map((p) => p.maxHoldingMinutes)
+        .toList();
+    if (holdingValues.isNotEmpty) {
+      final minHolding = holdingValues.reduce((a, b) => a < b ? a : b);
+      if (minHolding != maxHolding) {
+        final winners = players
+            .where((p) => p.maxHoldingMinutes == minHolding)
+            .map((p) => p.displayName)
+            .toList();
+        awards.add(_Award(
+          emoji: '🛡️',
+          title: '안전제일',
+          subtitle: '폭탄을 가장 적게 들고 있던 사람',
+          winners: winners,
+        ));
+      }
+    }
+
+    // 4. 다재다능
+    final maxItems =
+        players.map((p) => p.itemUsedCount).reduce((a, b) => a > b ? a : b);
+    if (maxItems > 0) {
+      final winners = players
+          .where((p) => p.itemUsedCount == maxItems)
+          .map((p) => p.displayName)
+          .toList();
+      awards.add(_Award(
+        emoji: '🎯',
+        title: '다재다능',
+        subtitle: '아이템을 가장 많이 사용한 사람',
+        winners: winners,
+      ));
+    }
+
+    // 5. 폭탄 배송 (📦 → 🚀, 픽셀 오류 수정)
+    final maxPass =
+        players.map((p) => p.passCount).reduce((a, b) => a > b ? a : b);
+    if (maxPass > 0) {
+      final winners = players
+          .where((p) => p.passCount == maxPass)
+          .map((p) => p.displayName)
+          .toList();
+      awards.add(_Award(
+        emoji: '🚀',
+        title: '폭탄 배송',
+        subtitle: '누구보다 빠르게 폭탄을 넘긴 사람',
+        winners: winners,
+      ));
     }
 
     return awards;
   }
 }
+
+// ── 어워드 데이터 ─────────────────────────────────────────────
 
 class _Award {
   const _Award({
@@ -322,13 +343,17 @@ class _Award {
     required this.title,
     required this.subtitle,
     required this.winners,
+    this.isLoser = false,
   });
 
   final String emoji;
   final String title;
   final String subtitle;
   final List<String> winners;
+  final bool isLoser;
 }
+
+// ── 일반 어워드 항목 ──────────────────────────────────────────
 
 class _AwardItem extends StatelessWidget {
   const _AwardItem({required this.award});
@@ -337,6 +362,8 @@ class _AwardItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (award.isLoser) return _LoserAwardItem(award: award);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 36),
       child: Column(
@@ -372,6 +399,82 @@ class _AwardItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── 패배자 전용 강조 위젯 ─────────────────────────────────────
+
+class _LoserAwardItem extends StatelessWidget {
+  const _LoserAwardItem({required this.award});
+
+  final _Award award;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 56),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+        decoration: BoxDecoration(
+          border: Border.all(
+              color: Colors.redAccent.withValues(alpha: 0.6), width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.red.withValues(alpha: 0.08),
+        ),
+        child: Column(
+          children: [
+            const Text('💥', style: TextStyle(fontSize: 64)),
+            const SizedBox(height: 10),
+            const Text(
+              '패배자',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.redAccent,
+                letterSpacing: 4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              award.subtitle,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white54,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            ...award.winners.map(
+              (name) => Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 30,
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              award.winners.length == 1
+                  ? '${award.winners.first}님, 수고하셨습니다... 👋'
+                  : '두 분 다 수고하셨습니다... 👋',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.white38,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
