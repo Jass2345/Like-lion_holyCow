@@ -116,6 +116,24 @@ class GroupController extends _$GroupController {
     return state.hasError ? null : groupId;
   }
 
+  /// 방장이 특정 멤버 강퇴
+  Future<void> kickMember({
+    required String groupId,
+    required String kickedUid,
+  }) async {
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() async {
+      await ref
+          .read(groupRepositoryProvider)
+          .kickMember(groupId: groupId, kickedUid: kickedUid);
+    });
+    state = result.when(
+      data: (_) => const AsyncData(null),
+      error: AsyncError.new,
+      loading: AsyncLoading.new,
+    );
+  }
+
   /// 그룹 나가기 — 마지막 멤버가 나가면 그룹 데이터 말소
   Future<void> leaveGroup({required String groupId}) async {
     state = const AsyncLoading();

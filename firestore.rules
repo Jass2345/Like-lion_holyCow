@@ -69,9 +69,32 @@ service cloud.firestore {
                         && request.resource.data.memberNicknames.diff(resource.data.memberNicknames).affectedKeys().hasOnly([request.auth.uid])
                         && request.resource.data.diff(resource.data).changedKeys().hasOnly(['memberNicknames'])
                       )
+                      ||
+                      // Case 3: leaveGroup - 본인이 스스로 탈퇴 (waiting·finished 상태)
+                      (
+                        request.auth.uid in resource.data.memberUids
+                        && !(request.auth.uid in request.resource.data.memberUids)
+                        && request.resource.data.memberUids.size() == resource.data.memberUids.size() - 1
+                        && (resource.data.status == 'waiting' || resource.data.status == 'finished')
+                        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['memberUids', 'memberNicknames'])
+                      )
+                      ||
+                      // Case 4: kickMember - 방장이 다른 멤버 강퇴 (waiting 상태에서만)
+                      (
+                        request.auth.uid == resource.data.hostUid
+                        && request.auth.uid in resource.data.memberUids
+                        && request.auth.uid in request.resource.data.memberUids
+                        && resource.data.status == 'waiting'
+                        && request.resource.data.memberUids.size() == resource.data.memberUids.size() - 1
+                        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['memberUids', 'memberNicknames'])
+                      )
                     );
 
-      allow delete: if false;
+      // 마지막 멤버가 탈퇴할 때 그룹 문서 삭제 허용
+      allow delete: if isSignedIn()
+                    && request.auth.uid in resource.data.memberUids
+                    && resource.data.memberUids.size() == 1
+                    && (resource.data.status == 'waiting' || resource.data.status == 'finished');
 
       match /bombs/{bombId} {
         allow read: if isGroupMember(groupId);

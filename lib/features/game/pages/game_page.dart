@@ -75,6 +75,14 @@ class _WaitingView extends ConsumerWidget {
     final uid = ref.watch(currentUidProvider);
     final isHost = group.memberUids.isNotEmpty && group.memberUids[0] == uid;
 
+    // 강퇴된 경우 (내가 더 이상 멤버가 아닌 경우) 홈으로 이동
+    if (uid != null && !group.memberUids.contains(uid)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.go(AppRoutes.home);
+      });
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.go(AppRoutes.home)),
@@ -123,6 +131,8 @@ class _WaitingView extends ConsumerWidget {
                         group.memberNicknames[memberUid] ?? '알 수 없음';
                     final isSelf = memberUid == uid;
                     final isMemberHost = i == 0;
+                    // 방장은 본인 제외 각 멤버에 강퇴 버튼 표시
+                    final showKick = isHost && !isMemberHost;
                     return ListTile(
                       leading: CircleAvatar(
                         child: Text(nickname.isNotEmpty ? nickname[0] : '?'),
@@ -137,20 +147,41 @@ class _WaitingView extends ConsumerWidget {
                       ),
                       trailing: isMemberHost
                           ? const Chip(label: Text('방장'))
-                          : null,
+                          : showKick
+                              ? IconButton(
+                                  icon: const Icon(Icons.person_remove,
+                                      color: Colors.red),
+                                  tooltip: '강퇴',
+                                  onPressed: () => _confirmKick(
+                                      context, ref, memberUid, nickname),
+                                )
+                              : null,
                     );
                   },
                 ),
               ),
-              if (!isHost)
+              if (!isHost) ...[
                 const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Text(
                     '방장이 게임을 시작하면 자동으로 시작됩니다.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: OutlinedButton(
+                    onPressed: () => _confirmLeave(context, ref),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('그룹 나가기'),
+                  ),
+                ),
+              ],
               if (isHost)
                 ElevatedButton(
                   onPressed: group.memberUids.length >= 2
@@ -182,6 +213,78 @@ class _WaitingView extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmLeave(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('그룹 나가기'),
+        content: const Text('정말 이 그룹을 나가시겠어요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('나가기'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await ref
+        .read(groupControllerProvider.notifier)
+        .leaveGroup(groupId: group.id);
+    if (context.mounted) context.go(AppRoutes.home);
+  }
+
+  Future<void> _confirmKick(
+    BuildContext context,
+    WidgetRef ref,
+    String kickedUid,
+    String nickname,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('멤버 강퇴'),
+        content: Text('$nickname 님을 강퇴하시겠어요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('강퇴'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    final err = await _runKick(ref, kickedUid);
+    if (err != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('강퇴 실패: $err')),
+      );
+    }
+  }
+
+  Future<String?> _runKick(WidgetRef ref, String kickedUid) async {
+    try {
+      await ref
+          .read(groupControllerProvider.notifier)
+          .kickMember(groupId: group.id, kickedUid: kickedUid);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
   }
 }
 
