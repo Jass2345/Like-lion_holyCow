@@ -1,12 +1,11 @@
+import 'package:bomb_pass/data/models/user_model.dart';
+import 'package:bomb_pass/data/repositories/user_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../models/user_model.dart';
-import '../repositories/user_repository.dart';
 
 const _preferredFunctionsRegion = 'asia-northeast3';
 const _fallbackFunctionsRegions = ['us-central1'];
@@ -105,6 +104,30 @@ final groupCurrencyProvider =
   final currencies =
       data['groupCurrencies'] as Map<String, dynamic>? ?? {};
   return (currencies[groupId] as num?)?.toInt() ?? 0;
+});
+
+/// 그룹별 보유 아이템 ID 목록 실시간
+final groupOwnedItemIdsProvider =
+    Provider.family<List<String>, String>((ref, groupId) {
+  final data = ref.watch(_rawUserDocProvider).asData?.value;
+  if (data == null) return const [];
+
+  final ownedGroups = data['groupOwnedItemIds'] as Map<String, dynamic>? ?? {};
+  final itemIds = ownedGroups[groupId] as List<dynamic>?;
+  return itemIds?.cast<String>() ?? const [];
+});
+
+/// 그룹별 보유 아이템 개수 (itemId -> count)
+final groupOwnedItemCountsProvider =
+    Provider.family<Map<String, int>, String>((ref, groupId) {
+  final itemIds = ref.watch(groupOwnedItemIdsProvider(groupId));
+  final counts = <String, int>{};
+
+  for (final itemId in itemIds) {
+    counts.update(itemId, (value) => value + 1, ifAbsent: () => 1);
+  }
+
+  return counts;
 });
 
 /// 마지막 출석 날짜 (String, e.g. "2026-04-12")

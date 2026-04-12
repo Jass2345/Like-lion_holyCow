@@ -39,8 +39,14 @@ export const adminCommand = functions.https.onCall(async (data, context) => {
     case '/items': {
       const itemsSnap = await db.collection('shopItems').get();
       const ids = itemsSnap.docs.map((d) => d.id);
-      await db.collection('users').doc(uid).update({
-        [`groupOwnedItemIds.${groupId}`]: admin.firestore.FieldValue.arrayUnion(...ids),
+      const userRef = db.collection('users').doc(uid);
+      const userSnap = await userRef.get();
+      const ownedGroups =
+        (userSnap.data()?.groupOwnedItemIds as Record<string, string[]> | undefined) ?? {};
+      const currentOwnedItems = [...(ownedGroups[groupId] ?? [])];
+
+      await userRef.update({
+        [`groupOwnedItemIds.${groupId}`]: [...currentOwnedItems, ...ids],
       });
       return { success: true, message: `아이템 ${ids.length}개 지급 완료` };
     }

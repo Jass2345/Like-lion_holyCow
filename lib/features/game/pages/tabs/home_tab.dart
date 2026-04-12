@@ -96,23 +96,13 @@ class _GameBodyState extends ConsumerState<_GameBody>
     final uid = ref.watch(currentUidProvider);
     final group =
         ref.watch(watchGroupProvider(groupId)).asData?.value;
-    final ownedItemIds = ref
-            .watch(currentUserProvider)
-            .asData
-            ?.value
-            ?.groupOwnedItemIds[groupId] ??
-        const <String>[];
-    final shopItems =
-        ref.watch(shopItemsProvider).asData?.value ?? const <ShopItemModel>[];
+    final ownedInventory = ref.watch(groupOwnedInventoryProvider(groupId));
+    final totalOwnedItemCount =
+      ref.watch(groupOwnedInventoryTotalCountProvider(groupId));
 
     final holderNickname =
         group?.memberNicknames[widget.holderUid] ?? widget.holderUid;
     final memberUids = group?.memberUids ?? const <String>[];
-
-    final usableItems = shopItems
-        .where((item) => ownedItemIds.contains(item.id))
-        .where((item) => item.usageType == UsageType.always || isMyTurn)
-        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -235,12 +225,17 @@ class _GameBodyState extends ConsumerState<_GameBody>
             const SizedBox(height: 16),
           ],
 
-          // 아이템 인벤토리 (전달 버튼 위)
-          if (usableItems.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            _ItemBar(items: usableItems, groupId: groupId),
-            const SizedBox(height: 16),
-          ],
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 128,
+            child: _ItemBar(
+              inventory: ownedInventory,
+              totalCount: totalOwnedItemCount,
+              groupId: groupId,
+              isMyTurn: isMyTurn,
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // 폭탄 전달 버튼
           ElevatedButton(
@@ -267,13 +262,36 @@ class _GameBodyState extends ConsumerState<_GameBody>
 
 /// 아이템 가로 스크롤 바
 class _ItemBar extends ConsumerWidget {
-  const _ItemBar({required this.items, required this.groupId});
+  const _ItemBar({
+    required this.inventory,
+    required this.totalCount,
+    required this.groupId,
+    required this.isMyTurn,
+  });
 
-  final List<ShopItemModel> items;
+  final List<OwnedInventoryItem> inventory;
+  final int totalCount;
   final String groupId;
+  final bool isMyTurn;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (inventory.isEmpty) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Center(
+          child: Text(
+            '보유한 아이템이 없습니다.',
+            style: TextStyle(fontSize: 13, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -287,20 +305,29 @@ class _ItemBar extends ConsumerWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '${items.length}개',
+              '$totalCount개',
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 72,
+          height: 92,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: items.length,
+            itemCount: inventory.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, i) =>
-                _ItemCard(item: items[i], groupId: groupId),
+            itemBuilder: (_, i) {
+              final inventoryItem = inventory[i];
+              final item = inventoryItem.item;
+              return _ItemCard(
+                item: item,
+                groupId: groupId,
+                count: inventoryItem.count,
+                isUsable:
+                    item.usageType == UsageType.always || isMyTurn,
+              );
+            },
           ),
         ),
       ],
@@ -310,10 +337,17 @@ class _ItemBar extends ConsumerWidget {
 
 /// 개별 아이템 카드
 class _ItemCard extends ConsumerWidget {
-  const _ItemCard({required this.item, required this.groupId});
+  const _ItemCard({
+    required this.item,
+    required this.groupId,
+    required this.count,
+    required this.isUsable,
+  });
 
   final ShopItemModel item;
   final String groupId;
+  final int count;
+  final bool isUsable;
 
   Future<void> _onItemTap(BuildContext context, WidgetRef ref) async {
     // adjustGameDays: ±1일 선택 다이얼로그
@@ -407,28 +441,86 @@ class _ItemCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(gameControllerProvider).isLoading;
+    final canTap = isUsable && !isLoading;
+    final backgroundColor = isUsable
+        ? Theme.of(context).colorScheme.surfaceContainerHighest
+        : Theme.of(context).colorScheme.surfaceContainerLow;
+    final borderColor = Colors.grey.shade300;
+    final textColor = isUsable ? null : Colors.grey;
 
     return GestureDetector(
-      onTap: isLoading ? null : () => _onItemTap(context, ref),
-      child: Container(
-        width: 72,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ItemIcon(itemType: item.id),
-            const SizedBox(height: 4),
-            Text(
-              item.name,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+      onTap: canTap ? () => _onItemTap(context, ref) : null,
+      child: Opacity(
+        opacity: isUsable ? 1 : 0.72,
+        child: Container(
+          width: 72,
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (!isUsable)
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: -3,
+                right: -5,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isUsable ? Colors.black87 : Colors.grey,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    'x$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              Align(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ItemIcon(itemType: item.id),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.name,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

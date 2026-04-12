@@ -1,15 +1,14 @@
+import 'package:bomb_pass/core/constants/app_constants.dart';
+import 'package:bomb_pass/data/firebase/firebase_providers.dart';
+import 'package:bomb_pass/data/models/shop_item_model.dart';
+import 'package:bomb_pass/features/shop/controllers/shop_controller.dart';
+import 'package:bomb_pass/widgets/item_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_constants.dart';
-import '../../../data/firebase/firebase_providers.dart';
-import '../../../data/models/shop_item_model.dart';
-import '../../../widgets/item_icon.dart';
-import '../controllers/shop_controller.dart';
-
 /// 탭에서 직접 사용하는 상점 body 위젯
 class ShopBody extends ConsumerWidget {
-  const ShopBody({super.key, required this.groupId});
+  const ShopBody({required this.groupId, super.key});
 
   final String groupId;
 
@@ -26,15 +25,9 @@ class ShopBody extends ConsumerWidget {
             ..sort((a, b) => b.probability.compareTo(a.probability));
           final totalWeight = pool.fold(0, (sum, i) => sum + i.probability);
 
-          final ownedItemIds = ref
-                  .watch(currentUserProvider)
-                  .asData
-                  ?.value
-                  ?.groupOwnedItemIds[groupId] ??
-              const <String>[];
-          final ownedItems = items
-              .where((item) => ownedItemIds.contains(item.id))
-              .toList();
+          final ownedInventory = ref.watch(groupOwnedInventoryProvider(groupId));
+          final totalOwnedCount =
+              ref.watch(groupOwnedInventoryTotalCountProvider(groupId));
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -42,7 +35,7 @@ class ShopBody extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // 내 인벤토리
-                if (ownedItems.isNotEmpty) ...[
+                if (ownedInventory.isNotEmpty) ...[
                   Row(
                     children: [
                       const Icon(Icons.backpack_rounded,
@@ -55,7 +48,7 @@ class ShopBody extends ConsumerWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '${ownedItems.length}개',
+                        '$totalOwnedCount개',
                         style: const TextStyle(
                             fontSize: 12, color: Colors.grey),
                       ),
@@ -65,8 +58,13 @@ class ShopBody extends ConsumerWidget {
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
-                    children: ownedItems
-                        .map((item) => _InventoryChip(item: item))
+                    children: ownedInventory
+                        .map(
+                          (inventoryItem) => _InventoryChip(
+                            item: inventoryItem.item,
+                            count: inventoryItem.count,
+                          ),
+                        )
                         .toList(),
                   ),
                   const SizedBox(height: 24),
@@ -145,9 +143,9 @@ class _RandomBoxCard extends ConsumerWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.casino),
-                label: Text(
+                label: const Text(
                   '뽑기! 💰 ${CurrencyConstants.randomBoxPrice}',
-                  style: const TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16),
                 ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -291,9 +289,10 @@ class _ItemPoolTile extends StatelessWidget {
 }
 
 class _InventoryChip extends StatelessWidget {
-  const _InventoryChip({required this.item});
+  const _InventoryChip({required this.item, required this.count});
 
   final ShopItemModel item;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
@@ -312,6 +311,22 @@ class _InventoryChip extends StatelessWidget {
           Text(
             item.name,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'x$count',
+              style: const TextStyle(
+                fontSize: 10,
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),

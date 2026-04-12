@@ -80,10 +80,14 @@ export const openLootBox = functions.https.onCall(async (data, context) => {
     }
 
     remainingCurrency = currentCurrency - RANDOM_BOX_PRICE;
+    const ownedGroups =
+      (userSnap.data()?.groupOwnedItemIds as Record<string, string[]> | undefined) ?? {};
+    const currentOwnedItems = [...(ownedGroups[groupId] ?? [])];
+    currentOwnedItems.push(obtained.id);
 
     tx.update(userRef, {
       [`groupCurrencies.${groupId}`]: remainingCurrency,
-      [`groupOwnedItemIds.${groupId}`]: admin.firestore.FieldValue.arrayUnion(obtained.id),
+      [`groupOwnedItemIds.${groupId}`]: currentOwnedItems,
       lootBoxCount: admin.firestore.FieldValue.increment(1),
     });
   });

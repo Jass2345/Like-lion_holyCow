@@ -1,26 +1,20 @@
+import 'package:bomb_pass/core/constants/app_constants.dart';
+import 'package:bomb_pass/data/firebase/firebase_providers.dart';
+import 'package:bomb_pass/data/models/shop_item_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-import '../../core/constants/app_constants.dart';
-import '../firebase/firebase_providers.dart';
-import '../models/shop_item_model.dart';
 
 part 'shop_repository.g.dart';
 
 @riverpod
 ShopRepository shopRepository(Ref ref) {
-  return ShopRepository(
-    ref.watch(firestoreProvider),
-    ref.watch(functionsProvider),
-  );
+  return ShopRepository(ref.watch(firestoreProvider));
 }
 
 class ShopRepository {
-  ShopRepository(this._firestore, this._functions);
+  ShopRepository(this._firestore);
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions;
 
   /// 아이템 목록 조회
   Future<List<ShopItemModel>> fetchItems() async {
@@ -44,11 +38,12 @@ class ShopRepository {
   /// 랜덤박스 구매 — Cloud Function 위임 (서버 측 랜덤·트랜잭션으로 조작 방지)
   /// 반환: 획득한 ShopItemModel
   Future<ShopItemModel> purchaseRandomBox({required String groupId}) async {
-    final result = await _functions
-        .httpsCallable('openLootBox')
-        .call<Map<Object?, Object?>>({'groupId': groupId});
+    final result = await callHttpsCallableWithRegionFallback(
+      functionName: 'openLootBox',
+      data: {'groupId': groupId},
+    );
 
-    final data = Map<String, dynamic>.from(result.data);
+    final data = Map<String, dynamic>.from(result.data as Map);
     final itemId = data['itemId'] as String;
 
     final itemSnap = await _firestore

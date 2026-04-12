@@ -32,6 +32,8 @@ export const useItem = functions.https.onCall(async (data, context) => {
   if (!ownedItems.includes(itemId)) {
     throw new functions.https.HttpsError('permission-denied', '해당 아이템을 보유하지 않았습니다.');
   }
+  const updatedOwnedItems = [...ownedItems];
+  updatedOwnedItems.splice(updatedOwnedItems.indexOf(itemId), 1);
 
   // ── 아이템 정보 조회 ─────────────────────────────────────────
   const itemSnap = await db.collection('shopItems').doc(itemId).get();
@@ -156,7 +158,7 @@ export const useItem = functions.https.onCall(async (data, context) => {
 
   // ── 인벤토리에서 아이템 제거 ─────────────────────────────────
   batch.update(userRef, {
-    [`groupOwnedItemIds.${groupId}`]: admin.firestore.FieldValue.arrayRemove(itemId),
+    [`groupOwnedItemIds.${groupId}`]: updatedOwnedItems,
   });
 
   await batch.commit();
