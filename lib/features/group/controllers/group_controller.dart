@@ -22,10 +22,12 @@ class GroupController extends _$GroupController {
   AsyncValue<void> build() => const AsyncData(null);
 
   /// 새 그룹 생성 — 성공 시 groupId 반환
+  /// 기본 닉네임은 빈 문자열(미설정). 생성 직후 nickname_input_page로
+  /// 이동하여 방장이 직접 닉네임을 지정해야 한다.
   Future<String?> createGroup({
     required String name,
     required int maxMembers,
-    String nickname = '익명',
+    String nickname = '',
   }) async {
     state = const AsyncLoading();
     final uid = ref.read(currentUidProvider);

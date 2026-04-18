@@ -220,8 +220,10 @@ class _WaitingView extends ConsumerWidget {
                   itemBuilder: (_, i) {
                     final memberUid = group.memberUids[i];
                     final rawNickname = group.memberNicknames[memberUid];
-                    final hasNickname =
-                        rawNickname != null && rawNickname.isNotEmpty;
+                    // 레거시 데이터 호환: '익명'도 닉네임 미설정으로 취급한다
+                    final hasNickname = rawNickname != null &&
+                        rawNickname.isNotEmpty &&
+                        rawNickname != '익명';
                     final nickname = hasNickname ? rawNickname : '닉네임 미설정';
                     final isSelf = memberUid == uid;
                     final isMemberHost = i == 0;
@@ -296,8 +298,11 @@ class _WaitingView extends ConsumerWidget {
                   ),
                 ElevatedButton(
                   onPressed: group.memberUids.length >= 2 &&
-                          group.memberUids.every((u) =>
-                              (group.memberNicknames[u]?.isNotEmpty ?? false))
+                          group.memberUids.every((u) {
+                            final n = group.memberNicknames[u];
+                            // 레거시 데이터 호환: '익명'은 닉네임 미설정으로 취급
+                            return n != null && n.isNotEmpty && n != '익명';
+                          })
                       ? () async {
                           try {
                             await ref

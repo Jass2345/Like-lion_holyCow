@@ -17,7 +17,8 @@ const hasAllNicknames = (
   if (!memberNicknames) return false;
   return memberUids.every((uid) => {
     const nick = memberNicknames[uid];
-    return typeof nick === 'string' && nick.length > 0;
+    // 레거시 데이터 호환: '익명'은 닉네임 미설정으로 취급한다.
+    return typeof nick === 'string' && nick.length > 0 && nick !== '익명';
   });
 };
 
