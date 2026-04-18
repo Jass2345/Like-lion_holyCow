@@ -262,7 +262,7 @@ class _CreditsContent extends StatelessWidget {
       ));
     }
 
-    // 2. 폭탄 러버
+    // 2. 폭탄 러버 (🔥 → 🤗, 픽셀 오류 수정)
     final maxHolding =
         players.map((p) => p.maxHoldingMinutes).reduce((a, b) => a > b ? a : b);
     if (maxHolding > 0) {
@@ -271,7 +271,7 @@ class _CreditsContent extends StatelessWidget {
           .map((p) => p.displayName)
           .toList();
       awards.add(_Award(
-        emoji: '🔥',
+        emoji: '🤗',
         title: '폭탄 러버',
         subtitle: '폭탄을 가장 오래 들고 있던 사람',
         winners: winners,
