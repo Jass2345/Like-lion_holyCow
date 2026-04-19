@@ -606,6 +606,30 @@ class _PlayingTabView extends ConsumerStatefulWidget {
 class _PlayingTabViewState extends ConsumerState<_PlayingTabView> {
   int _tabIndex = 2; // 홈 탭 기본
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startInGameBgm());
+  }
+
+  void _startInGameBgm() {
+    if (!mounted) return;
+    final audioSvc = ref.read(audioServiceProvider);
+    final uid = ref.read(currentUidProvider);
+    final bomb =
+        ref.read(activeBombProvider(widget.groupId)).asData?.value;
+    if (bomb == null || bomb.status != BombStatus.active) {
+      audioSvc.playBgm('IngameBGM1.mp3');
+      return;
+    }
+    if (bomb.holderUid == uid) {
+      audioSvc.playBgm('IngameBGM1.mp3', volume: 0.025);
+      audioSvc.playTicking();
+    } else {
+      audioSvc.playBgm('IngameBGM1.mp3');
+    }
+  }
+
   static const _tabs = [
     NavigationDestination(icon: Icon(Icons.store), label: '상점'),
     NavigationDestination(icon: Icon(Icons.assignment), label: '미션'),
@@ -620,7 +644,6 @@ class _PlayingTabViewState extends ConsumerState<_PlayingTabView> {
   @override
   Widget build(BuildContext context) {
     final uid = ref.watch(currentUidProvider);
-    final audioSvc = ref.read(audioServiceProvider);
 
     // 폭탄 상태 리스너 (BGM 변경)
     ref.listen(activeBombProvider(widget.groupId), (prev, next) {
@@ -718,14 +741,16 @@ class _PlayingTabViewState extends ConsumerState<_PlayingTabView> {
           context.go(AppRoutes.home);
         },
         child: FloatingBombBackground(
-          child: switch (_tabIndex) {
-            0 => ShopBody(groupId: widget.groupId),
-            1 => MissionBody(groupId: widget.groupId),
-            2 => HomeTab(groupId: widget.groupId),
-            3 => LogTab(groupId: widget.groupId),
-            4 => SettingsTab(groupId: widget.groupId),
-            _ => HomeTab(groupId: widget.groupId),
-          },
+          child: IndexedStack(
+            index: _tabIndex,
+            children: [
+              ShopBody(groupId: widget.groupId),
+              MissionBody(groupId: widget.groupId),
+              HomeTab(groupId: widget.groupId),
+              LogTab(groupId: widget.groupId),
+              SettingsTab(groupId: widget.groupId),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
@@ -733,8 +758,9 @@ class _PlayingTabViewState extends ConsumerState<_PlayingTabView> {
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) {
           setState(() => _tabIndex = i);
-          // 탭 전환 후 BGM이 멈춰있으면 복구
-          ref.read(audioServiceProvider).ensureBgmPlaying();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(audioServiceProvider).ensureBgmPlaying();
+          });
         },
         destinations: _tabs,
       ),
