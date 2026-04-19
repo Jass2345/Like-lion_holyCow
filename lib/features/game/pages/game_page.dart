@@ -872,6 +872,9 @@ class _ExplosionOverlay extends StatelessWidget {
         return Positioned.fill(
           child: Stack(
             children: [
+              // 항상 검정 배경 (iOS 홈 인디케이터가 배경색을 반영하지 않도록)
+              const ColoredBox(color: Colors.black),
+
               // 폭탄 흔들림
               if (bombOpacity > 0)
                 Center(
