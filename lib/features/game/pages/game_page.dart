@@ -180,7 +180,10 @@ class _GamePageState extends ConsumerState<GamePage>
             child: Stack(
               children: [
                 const Scaffold(backgroundColor: Colors.black, body: SizedBox()),
-                _ExplosionOverlay(controller: _explosionController),
+                Material(
+                  type: MaterialType.transparency,
+                  child: _ExplosionOverlay(controller: _explosionController),
+                ),
               ],
             ),
           );
