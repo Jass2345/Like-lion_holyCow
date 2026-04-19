@@ -641,27 +641,28 @@ class _PlayingTabViewState extends ConsumerState<_PlayingTabView> {
 
       if (newBomb == null) return;
 
+      final audio = ref.read(audioServiceProvider);
       final iHaveBomb = newBomb.holderUid == uid;
       final iHadBomb = oldBomb?.holderUid == uid;
 
       // 내가 폭탄을 받았을 때
       if (!iHadBomb && iHaveBomb) {
-        audioSvc.changeBgmVolume(0.025); // BGM 볼륨 2.5%
-        audioSvc.playTicking();
-      } 
+        audio.changeBgmVolume(0.025);
+        audio.playTicking();
+      }
       // 내가 폭탄을 넘겼을 때 (안 가짐)
       else if (iHadBomb && !iHaveBomb) {
-        audioSvc.stopTicking();
+        audio.stopTicking();
         _currentBgm = (DateTime.now().millisecondsSinceEpoch % 2 == 0) ? 'IngameBGM1.mp3' : 'IngameBGM2.mp3';
-        audioSvc.playBgm(_currentBgm, volume: 0.05);
+        audio.playBgm(_currentBgm, volume: 0.05);
       }
-      // 처음 진입 시 or 초기화 시 (변경 없이 폭탄이 없는 상태)
+      // 처음 진입 시 or 초기화 시
       else if (oldBomb == null && !iHaveBomb && newBomb.status == BombStatus.active) {
-        audioSvc.playBgm(_currentBgm, volume: 0.05);
+        audio.playBgm(_currentBgm, volume: 0.05);
       }
       else if (oldBomb == null && iHaveBomb && newBomb.status == BombStatus.active) {
-        audioSvc.playBgm(_currentBgm, volume: 0.025);
-        audioSvc.playTicking();
+        audio.playBgm(_currentBgm, volume: 0.025);
+        audio.playTicking();
       }
     });
 
