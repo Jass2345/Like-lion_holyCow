@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/theme_provider.dart';
 import '../../../../data/models/group_model.dart';
-import '../../../admin/widgets/admin_cli_dialog.dart';
 import '../../../group/controllers/group_controller.dart';
 import '../../controllers/credits_controller.dart';
 import '../../../../core/services/audio_service.dart';
@@ -64,30 +63,6 @@ class SettingsTab extends ConsumerWidget {
                 },
               ),
             ],
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // 개발자 기능
-        const Text(
-          '개발자 기능',
-          style: TextStyle(
-              fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.developer_mode),
-            title: const Text('관리자 도구'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showDialog<void>(
-              context: context,
-              barrierDismissible: false,
-              builder: (ctx) => AdminCliDialog(groupId: groupId),
-            ).then((_) {
-              ref.read(audioServiceProvider).playSfx('ButtonClickSound1.mp3');
-            }),
           ),
         ),
 
