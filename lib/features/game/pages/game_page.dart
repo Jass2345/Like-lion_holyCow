@@ -164,11 +164,19 @@ class _GamePageState extends ConsumerState<GamePage>
 
         // 폭발 애니메이션 재생 중
         if (_explosionTriggered && !_readyForFinished) {
-          return Stack(
-            children: [
-              const Scaffold(backgroundColor: Colors.black, body: SizedBox()),
-              _ExplosionOverlay(controller: _explosionController),
-            ],
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.light,
+              systemNavigationBarColor: Colors.black,
+              systemNavigationBarIconBrightness: Brightness.light,
+            ),
+            child: Stack(
+              children: [
+                const Scaffold(backgroundColor: Colors.black, body: SizedBox()),
+                _ExplosionOverlay(controller: _explosionController),
+              ],
+            ),
           );
         }
 
