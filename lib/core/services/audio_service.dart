@@ -22,26 +22,6 @@ class AudioService {
     _tickingPlayer.setReleaseMode(ReleaseMode.loop);
     _bgmPlayer.setVolume(0.05);
     _tickingPlayer.setVolume(0.05);
-
-    // BGM이 예기치 않게 멈추면 자동 재시작
-    _bgmPlayer.onPlayerStateChanged.listen((state) {
-      if (state == PlayerState.stopped &&
-          _currentBgmFile != null &&
-          !_bgmChanging &&
-          !_bgmPaused) {
-        _restartBgm();
-      }
-    });
-  }
-
-  Future<void> _restartBgm() async {
-    if (_currentBgmFile == null || _bgmChanging || _bgmPaused) return;
-    try {
-      await _bgmPlayer.setVolume(_currentBgmVolume);
-      await _bgmPlayer.play(AssetSource('sounds/$_currentBgmFile'));
-    } catch (e) {
-      debugPrint('_restartBgm Error: $e');
-    }
   }
 
   Future<void> dispose() async {
